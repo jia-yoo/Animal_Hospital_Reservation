@@ -16,7 +16,7 @@
 <input type="hidden" name="reservId" th:value=${reservId}>
 <div class="d-flex align-items-end">
 	<h1 class="mt-3 mt-md-5 mb-3 mb-md-3">예약 상세 정보</h1>
-	<button class="btn btn-outline-main ms-auto mb-3"><i class="bi bi-bell-fill"></i> 알림 보내기</button>
+	<button class="btn btn-outline-main ms-auto mb-3" onclick="notification()"><i class="bi bi-bell-fill"></i> 알림 보내기</button>
 </div>
 <div class="border rounded p-3 p-md-4 mb-3">
 	<div class="row">
@@ -39,10 +39,6 @@
 			<div class="row mb-2">
 				<div class="col-4 text-secondary">메모</div>
 				<div class="col-8" id="memo">모모모모</div>
-			</div>
-			<div class="row mb-2">
-				<div class="col-4 text-secondary">쿠폰사용여부</div>
-				<div class="col-8" id="couponname">건강검진할인쿠폰</div>
 			</div>
 			<div class="row mb-2">
 				<div class="col-4 text-secondary">포인트 사용 여부</div>
@@ -145,7 +141,6 @@ fetch("http://localhost:9001/api/v1/hospital/reservation/" + reservId, {
 	document.getElementById("username").innerHTML = obj.user.name;
 	document.getElementById("type").innerHTML = obj.type;
 	document.getElementById("memo").innerHTML = obj.memo;
-	document.getElementById("couponname").innerHTML = couponeChek;
 	document.getElementById("point").innerHTML = obj.pointsUsed == null ? 0 : obj.pointsUsed;
 	if(obj.pet.photo == null){
 		document.getElementById("petPhoto").setAttribute("src", "/images/no_image.jpg");
@@ -173,11 +168,12 @@ fetch("http://localhost:9001/api/v1/hospital/reservation/" + reservId, {
 .catch(error => console.log(error));
 function statusComplete(){
 	let status = "완료";
-	console.log(status);
-	title='예약 알람';
-	body="진료가 완료되었습니다. 감사합니다 : )";
+	username = petname = document.getElementById("username").innerText;
+	petname = document.getElementById("petName").innerText;
+	title='예약 알림';
+	body=`${username}님 ${petname}의 진료가 완료되었습니다. 감사합니다. 😄`;
 	receiverId= userid;
-    sendTokenToMessageReceiver(title, body);
+    sendTokenToMessageReceiver(receiverId, title, body);
 	fetch("http://localhost:9001/api/v1/hospital/reservation/" + reservId + "/"+ status, {
 		method : "PUT",
 		headers: {
@@ -196,11 +192,11 @@ function statusComplete(){
 }
 function statusConfirmed(){
 	let status = "확정";
-	console.log(status);
-	title='예약 알람';
-	body="예약 확정되었습니다.";
+	username = petname = document.getElementById("username").innerText;
+	title='예약 알림';
+	body=`${username}님 예약 확정되었습니다. 😃`;
 	receiverId= userid;
-    sendTokenToMessageReceiver(title, body);
+    sendTokenToMessageReceiver(receiverId, title, body);
 	fetch("http://localhost:9001/api/v1/hospital/reservation/" + reservId + "/"+ status, {
 		method : "PUT",
 		headers: {
@@ -221,11 +217,11 @@ function statusConfirmed(){
 
 function statusCancle(){
 	let status = "취소";
-	console.log(status);
-	title='예약 알람';
-	body="예약이 거절되었습니다. 다시 예약 해주시기 바랍니다.";
+	username = petname = document.getElementById("username").innerText;
+	title='예약 알림';
+	body=`${username}님 예약이 거절되었습니다. 다시 예약 해주시기 바랍니다. 😥`;
 	receiverId= userid;
-    sendTokenToMessageReceiver(title, body);
+    sendTokenToMessageReceiver(receiverId, title, body);
 	fetch("http://localhost:9001/api/v1/hospital/reservation/" + reservId + "/"+ status, {
 		method : "PUT",
 		headers: {
@@ -245,6 +241,9 @@ function statusCancle(){
 
 function goBack(){
 	history.back(); // 이전 페이지로 이동
+}
+function notification(){
+    window.location.href = `/api/v1/common/notification?id=${reservId}`;
 }
 
 </script>

@@ -94,11 +94,11 @@ public class Securityconfig  {
 		
 		http
 			.authorizeHttpRequests(auth -> auth
-					.requestMatchers("/", "/ws/**", "/login", "/notice/**", "/images/**","api/v1/common/**",  "/api/v1/near-vet-list", "/api/v1/vet-list","/api/v1/fcm/**").permitAll()
+					.requestMatchers("/", "/ws/**", "/login", "/notice/**", "/images/**","api/v1/common/**",  "/api/v1/near-vet-list", "/api/v1/vet-list","/api/v1/fcm/**","/api/v1/ws/**").permitAll()
 					.requestMatchers("/v3/**","/swagger-ui/**").permitAll()
 					.requestMatchers("/api/v1/hospital/**").hasAnyRole("HOSPITAL", "ADMIN")
 					
-					.requestMatchers("api/v1/user/**","api/petgame/**").hasAnyRole("USER", "ADMIN")
+					.requestMatchers("/api/v1/user/**","api/petgame/**").hasAnyRole("USER", "ADMIN")
 					.requestMatchers("/api/v1/manager/**").hasRole("ADMIN")
 					.anyRequest().authenticated() );
 			
@@ -118,6 +118,7 @@ public class Securityconfig  {
 	}
 	
 	
+	// 요청에 대한 인증이 안된경우 불려지는AuthenticationEntryPoint을 빈에 등록하는 메서드(토큰이 없거나 만료된경우)
 	
 	@Bean
     public AuthenticationEntryPoint authenticationEntryPoint() {

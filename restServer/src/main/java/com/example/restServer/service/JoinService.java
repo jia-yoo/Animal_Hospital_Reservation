@@ -46,7 +46,10 @@ public class JoinService {
 		
 		member.setName(memberDto.getName());
 		member.setAddress(memberDto.getAddress());
-		member.setPhone(memberDto.getPhone());
+		String pNum = memberDto.getPhone();
+		String pNumNew= phoneCheck(pNum);
+		member.setPhone(pNumNew);
+	
 		member.setNickname(memberDto.getNickname());
 		member.setRole(memberDto.getRole());
 		member.setEmail(memberDto.getEmail());
@@ -77,7 +80,10 @@ public class JoinService {
 	public void joinHospital(JoinHospitalDto joinHospitalDto) {
 		Member member = new Member();
 		member.setAddress(joinHospitalDto.getAddress());
-		member.setPhone(joinHospitalDto.getPhone());
+		String pNum = joinHospitalDto.getPhone();
+		String pNumNew= phoneCheck(pNum);
+		member.setPhone(pNumNew);
+		
 		member.setBusinessNumber(joinHospitalDto.getBusinessNumber());
 		member.setHospitalName(joinHospitalDto.getHospitalName());
 		member.setRepresentative(joinHospitalDto.getRepresentative());
@@ -103,7 +109,7 @@ public class JoinService {
 				//board.setThumbnailName(thumbnailSaveName);
 				
 				//File thumbfile = new File(uploadPath + thumbnailSaveName);
-				File ufile = new File(uploadPath + newName);
+				//File ufile = new File(uploadPath + newName);
 				
 				//Thumbnails.of(ufile).size(100,100).toFile(thumbfile);
 				System.out.println(joinHospitalDto);
@@ -150,8 +156,8 @@ public class JoinService {
 	//유저정보수정
 	public void updateEditUserInfo(MemberEditDto memberEditDto) {
 		System.out.println("유저정보수정서비스 들어옴");
-		if(memberEditDto.getPasswordCheckBox()!=null) {
-			System.out.println("병원정보수정서비스 새 비밀번호 if문 들어옴");
+		if(memberEditDto.getPasswordCheckBox().equals("true")) {
+			System.out.println("유저정보수정서비스 새 비밀번호 if문 들어옴");
 			Login login = loginRepository.findByUsername(memberEditDto.getUsername());
 			String password = bCryptPasswordEncoder.encode(memberEditDto.getPasswordNew());
 			login.setPassword(password);
@@ -160,7 +166,10 @@ public class JoinService {
 		}
 		Member member = memberRepository.findById(memberEditDto.getMemberId()).get();
 		member.setAddress(memberEditDto.getAddress());
-		member.setPhone(memberEditDto.getPhone());
+		String pNum = memberEditDto.getPhone();
+		String pNumNew= phoneCheck(pNum);
+		member.setPhone(pNumNew);
+		
 		member.setEmail(memberEditDto.getEmail());
 		member.setName(memberEditDto.getName());
 		member.setNickname(memberEditDto.getNickname());
@@ -179,7 +188,7 @@ public class JoinService {
 	//병원정보수정
 		public void updateEditHospitalInfo(MemberEditDto memberEditDto) {
 			System.out.println("병원정보수정서비스 들어옴");
-			if(memberEditDto.getPasswordCheckBox()!=null) {
+			if(memberEditDto.getPasswordCheckBox().equals("true")) {
 				System.out.println("병원정보수정서비스 새 비밀번호 if문 들어옴");
 				Login login = loginRepository.findByUsername(memberEditDto.getUsername());
 				String password = bCryptPasswordEncoder.encode(memberEditDto.getPasswordNew());
@@ -188,7 +197,10 @@ public class JoinService {
 				//비밀번호 잘 바뀌는지 확인 해야함!!!!!!!!
 			}
 			Member member = memberRepository.findById(memberEditDto.getMemberId()).get();
-			member.setPhone(memberEditDto.getPhone());
+			String pNum = memberEditDto.getPhone();
+			String pNumNew= phoneCheck(pNum);
+			member.setPhone(pNumNew);
+			
 			member.setEmail(memberEditDto.getEmail());
 			member.setRepresentative(memberEditDto.getRepresentative());
 			member.setBusinessHours(memberEditDto.getBusinessHours());
@@ -236,11 +248,76 @@ public class JoinService {
 			
 			//동물병원의사 처리
 			List<Doctor> doctors = doctorRepository.findAllByHospitalId(memberEditDto.getMemberId());
-			
+			String[] newDoctors =memberEditDto.getDoctorNamesField().split("//");
+			int newDoctorsCnt =newDoctors.length;
+			 int doctorCnt = doctors.size();
+			 System.out.println("기존 의사수 :"+ doctorCnt);
+			 System.out.println("수정 의사수 :"+ newDoctorsCnt);
+			boolean[] working = new boolean[doctorCnt];
+			boolean[] newD = new boolean[newDoctorsCnt];
+			for(int i= 0;i<doctorCnt;i++) {
+				for(int j =0 ; j<newDoctorsCnt ;j++) {
+					System.out.println(doctors.get(i).getName());
+					System.out.println(newDoctors[j]);
+					if(doctors.get(i).getName().equals(newDoctors[j])) {
+						System.out.println("같은 이름 :"+newDoctors[j]);
+						System.out.println(doctors.get(i));
+						if(doctors.get(i).getStatus()==null || !doctors.get(i).getStatus().equals("퇴사")) {
+							
+							working[i]=true;
+							newD[j]=true;
+						}
+						
+					
+					}
+				}
+			}
+			for(int i= 0;i<working.length;i++) {
+				System.out.println(working[i]);
+				if(!working[i]) {
+					doctors.get(i).setStatus("퇴사");
+					doctorRepository.save(doctors.get(i));
+				}
+			}
+			for(int i= 0;i<newD.length;i++) {
+				if(!newD[i]) {
+					Doctor doc = new Doctor();
+					doc.setHospital(member);
+					doc.setName(newDoctors[i]);
+					doctorRepository.save(doc);
+				}
+			}
 			
 			//List<String> newDoctors = memberEditDto.getDoctorNamesField().
 			
 			
+		}
+		
+		//전화번호 변환 함수
+		public String phoneCheck(String pNum) {
+			String pNumNew=pNum; 
+			if(!pNum.contains("-")) {
+				System.out.println("전화번호 이프 들어옴");
+				if(pNum.length()==11) {
+					String part1 = pNum.substring(0, 3);  // "010"
+			        String part2 = pNum.substring(3, 7);  // "1111"
+			        String part3 = pNum.substring(7);     // "2222"
+			        pNumNew=part1 + "-" + part2 + "-" +part3;
+				}else if(pNum.length() <11) {
+					if(pNum.startsWith("02")) {
+						String part1 = pNum.substring(0, 2);  // "02"
+				        String part2 = pNum.substring(2, 5);  // "111"
+				        String part3 = pNum.substring(5);     // "2222"
+				        pNumNew=part1 + "-" + part2 + "-" +part3;
+					}else {
+						String part1 = pNum.substring(0, 3);  // "051"
+				        String part2 = pNum.substring(3, 6);  // "111"
+				        String part3 = pNum.substring(6);     // "2222"
+				        pNumNew=part1 + "-" + part2 + "-" +part3;
+					}
+				}
+			}
+			return pNumNew;
 		}
 	
 

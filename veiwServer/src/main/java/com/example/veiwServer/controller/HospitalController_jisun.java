@@ -40,4 +40,15 @@ public class HospitalController_jisun {
 		return "/hospital/reserve_schedule";
 	}
 	
+	@RequestMapping("/customerList")
+	public String customerList() {
+		return "/hospital/customer_list";
+	}
+	
+	@RequestMapping("/customerDetail")
+	public String customerDetail(@RequestParam("petId")Long petId, Model model) {
+		model.addAttribute("petId", petId);
+		return "/hospital/customer_detail";
+	}
+	
 }

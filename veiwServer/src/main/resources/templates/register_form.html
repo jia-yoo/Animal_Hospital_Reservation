@@ -29,7 +29,7 @@
 		<div id="tab" class="d-flex">
 			<button id ="btnUser" class="btn btn-main" onclick="showUser()">반려인</button>
 			<button id ="btnHospital" class="btn btn-outline-main" onclick="showHospital()">동물병원</button>
-		</div>
+		</div><br>
 
 		<form id="frmUser">
 
@@ -41,15 +41,25 @@
 							class="btn btn-main ms-auto" onclick="checkUsername(event)"
 							value="중복체크">
 					</div>
-					<input type="text" name="username" id="username"
+					<input type="text" name="username" id="username" oninput="usernameCheckReset()" placeholder="아이디는 영어,숫자만 가능합니다.(3자 이상, 12자 이하)"
 						class="form-control">
 				</div>
 				<div id="usernameResult"></div>
 			</div>
+			
 			<div class="mb-3">
-				<label class="form-label">비밀번호</label> <input type="password"
-					name="password" class="form-control">
-				<div>비밀번호는 5자 이상, 15자 이하, 영어, 숫자, 특수문자를 포함해야 합니다.</div>
+			<label class="form-label">비밀번호</label> 
+					<input type="password"
+						name="password" id="password" class="form-control" oninput="passwordCheckReset()">
+					<div>비밀번호는 5자 이상, 15자 이하, 영어, 숫자, 특수문자를 포함해야 합니다.</div>
+				<br>
+				<div class="d-flex">
+					<label class="form-label">비밀번호 확인</label>
+					<input type="button" class="btn btn-main ms-auto" onclick="checkPassword()" value="비밀번호일치">
+				</div>
+				<input type="password"
+					name="password2" id="password2" class="form-control">
+					<div id="passwordResult"></div>
 			</div>
 			<div class="mb-3">
 				<label class="form-label">주소</label> <select id="address1"
@@ -61,6 +71,7 @@
 			<div class="mb-3">
 				<label class="form-label">전화번호</label> <input type="text"
 					name="phone" class="form-control">
+					<div>전화번호는 숫자와 "-"만 이용해 주세요</div>
 			</div>
 			<div class="mb-3">
 				<label class="form-label">이메일</label> <input type="text"
@@ -81,16 +92,16 @@
 								onclick="checkNickname(event)">
 						</div>
 						<input type="text" name="nickname" id="nickname"
-							class="form-control">
+							class="form-control"  oninput="nicknameCheckReset()">
+							
 					</div>
 				</div>
+				<div id="nicknameResult"></div>
 				<input type="hidden" name="role" value="ROLE_USER"> <input
 					type="button" value="회원가입" class="btn btn-main"
 					onclick="joinUser()">
-				<div id="nicknameResult"></div>
-				<br> <a href="/login_form">로그인</a>
 			</div>
-
+			<br>
 
 			<div id="hospital" style="display: none;">
 
@@ -690,10 +701,12 @@
 				
 				  <div class="mb-3">
             <div class="inputBox">
-                <div class="d-flex">
-                    <label class="form-label">수의사 이름</label> 
+                <div class="mb-3">
+                    <label class="form-label">수의사 이름</label>
+                    <div class="d-flex">
                     <input type="text" class="form-control" name="doctorName">
                     <input type="button" class="btn btn-main ms-auto" onclick="addDoctor()" value="추가">
+                    </div>
                 </div>
                 <div id="doctorResult"></div>
             </div>
@@ -719,15 +732,18 @@
 			<div class="mb-3">
 				<label class="form-label">로고 이미지</label> 
 				<input type="file" name="file" class="form-control">
+				
 			</div>
 			
 
-				<div class="mb-3"></div>
-				 <input
+				<div class="mb-3">
+				<input
 					type="button" value="회원가입" class="btn btn-main" id="hospitalJoinButton"
-					onclick="joinHospital()">
-				<div id="nicknameResult"></div>
-				<br> <a href="/login_form">로그인</a>
+					onclick="joinHospital()"><br>
+				</div>
+				 
+				
+				
 			</div>
 		</form>
 
@@ -750,6 +766,8 @@
 	<script>
 	readyAddress();
 	let loginRole =localStorage.getItem("role");
+
+	
 	if(loginRole){
 		alert("이미 로그인 상태입니다.");
 		if(loginRole=="ROLE_HOSPITAL"){
@@ -784,12 +802,18 @@
 		//유저네임 중복확인
 		function checkUsername(event){
 			event.preventDefault();
-			const username = document.querySelector("#username");
+			const username = document.querySelector("#username").value;
 			//alert(username.value);
-			if(username.value.length <3 ||username.value.length >12){
+			if(username.length <3 ||username.length >12){
 				alert("아이디를 3자 이상,12자 이하로 등록해주세요.");
 				return;
 			}
+			const usernamePattern = /^[A-Za-z\d]+$/;
+
+            if (!usernamePattern.test(username)) {
+                alert("아이디는 영어와 숫자만 포함할 수 있습니다.");
+                return;
+            }
 			
 			const xhttp = new XMLHttpRequest();
 			xhttp.onload = function() {
@@ -802,6 +826,27 @@
 
 			xhttp.send("username=" + username.value);
 		}
+		
+		//유저네임 다시 입력시 중복 확인 했어도 다시 하게끔 하는 함수
+		function usernameCheckReset(){
+			document.querySelector("#usernameResult").innerHTML=``;
+		}
+		//비밀번호 체크
+		function checkPassword(){
+			var password1 =document.querySelector("#password").value;
+			var password2 =document.querySelector("#password2").value;
+			if (password1 ==password2){
+				document.querySelector("#passwordResult").innerHTML =`입력하신 비밀번호가 서로 일치합니다.`;
+			}else{
+				document.querySelector("#passwordResult").innerHTML =`입력하신 비밀번호가 서로 다릅니다.`;
+			}
+		}
+		//비밀번호 다시 입력시 다시 체크하게 하는 함수
+		function passwordCheckReset(){
+			document.querySelector("#passwordResult").innerHTML=``;
+		}
+		
+		
 		//닉네임 중복확인 
 		function checkNickname(event){
 			event.preventDefault();
@@ -822,6 +867,9 @@
 			xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");	
 
 			xhttp.send("nickname=" + nickname.value);
+		}
+		function nicknameCheckReset(){
+			document.querySelector("#nicknameResult").innerHTML=``;
 		}
 		//유저 회원가입
 		function joinUser() {
@@ -895,6 +943,7 @@
 	            }
 	            const usernameResult = document.getElementById("usernameResult").innerText;
 	            const nicknameResult = document.getElementById("nicknameResult").innerText;
+	            const passwordResult = document.querySelector("#passwordResult").innerText;
 
 	            if (!usernameResult.includes("사용가능")) {
 	                alert("아이디 중복 체크를 확인해 주세요.");
@@ -915,11 +964,41 @@
 	                return false;
 	            }
 	            const password = frm.password.value.trim();
+	            if(!passwordResult.includes("일치")){
+	            	alert("비밀번호 확인을 해주세요.");
+	            	document.querySelector("#password").focus();
+	            	return false;
+	            }
 	            if (!validatePassword(password)) {
 	                alert("비밀번호는 5자 이상 15자 이하의 길이여야 하며, 영어, 숫자, 특수문자를 포함해야 합니다.");
 	                frm.password.focus();
 	                return false;
 	            }
+	            //전화번호 유효성 검사
+	            let phone =frm.phone.value.trim();
+	            phone = phone.replace(/\s+/g, '');
+	            const pCheck = /^[0-9-]+$/;
+	           	const result =pCheck.test(phone);
+	            //alert("phone:" + phone);
+	            if(phone.includes("-")){
+	            	if((!result) || phone.length<11 || phone.length>13 ||(phone.length==11 && !phone.startsWith("02"))){
+		            	alert("전화번호가 잘못입력 되었습니다.");
+		            	return false;
+		            }else if(phone.startsWith("02") && phone.length>12){
+		            	alert("전화번호가 잘못입력 되었습니다.");
+		            	return false;
+		            }
+	            }else{
+	            	if((!result) || phone.length<9 || phone.length>11 ||(phone.length==9 && !phone.startsWith("02"))){
+		            	alert("전화번호가 잘못입력 되었습니다.");
+		            	return false;
+		            }else if(phone.startsWith("02") && phone.length>10){
+		            	alert("전화번호가 잘못입력 되었습니다.");
+		            	return false;
+		            }
+	            }
+	            
+	            
 	            
 	            
 	            return true;
@@ -955,7 +1034,7 @@
             document.getElementById('doctorNamesField').value = doctorNames;
         }
 		
-		//예약 관련
+		//예약 관련 
 		  function gatherFormData() {
     const days = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun', 'hol'];
     const jsonData = {};
@@ -979,7 +1058,9 @@
             const end = `${endHour}:${endMinute}`;
             const lunchStart = `${lunchStartHour}:${lunchStartMinute}`;
             const lunchEnd = `${lunchEndHour}:${lunchEndMinute}`;
-
+			if(endHour ==0){
+				endHour = "24";			
+			}
             const businessTime = `${start}//${end}`;
             const lunchTime = noLunch ? '점심시간 없음' : `${lunchStart}//${lunchEnd}`;
 
@@ -996,15 +1077,18 @@
 		//병원 회원가입
 		function joinHospital(){
 			//alert("조인들어옴");
-			if (!hospitalValidateForm()) {
-                return;
-            }
+			//console.log(endHourCheck);
+			
 			//alert(JSON.stringify(gatherFormData()));
 			
 			const frm = document.querySelector("#frmUser");
 			const formData = new FormData(frm);
 			//const data = JSON.stringify(frm_);
-			const businessHours = gatherFormData();
+			var businessHours = gatherFormData();
+			if (!hospitalValidateForm() ) {
+				
+                return;
+            }
        		formData.append('businessHours', JSON.stringify(businessHours));
        		
        		formData.append('address', frm.address1.value + "//" + frm.address2.value + "//" + frm.detailAddress.value);
@@ -1061,7 +1145,14 @@
             	alert("의사를 한명 이상 등록하세요.");
             	return false;
             }
-
+            
+            //사업자 번호 검사
+			let businessNumberResult =document.getElementById("businessNumberResult").innerText;
+            if(businessNumberResult.includes("등록되지 않은") || businessNumberResult==""){
+            	alert("등록된 사업자 번호가 아닙니다.다시 확인해 주세요.");
+            	document.querySelector("#business_number").focus();
+            	return false;
+            }
             
             const email = frm.email.value.trim();
             if (!validateEmail(email)) {
@@ -1082,7 +1173,29 @@
                 
                 return false;
             }
-            
+            //전화번호 유효성 검사
+            let phone =frm.phone.value.trim();
+            phone = phone.replace(/\s+/g, '');
+            const pCheck = /^[0-9-]+$/;
+           	const result =pCheck.test(phone);
+            //alert("phone:" + phone);
+            if(phone.includes("-")){
+            	if((!result) || phone.length<11 || phone.length>13 ||(phone.length==11 && !phone.startsWith("02"))){
+	            	alert("전화번호가 잘못입력 되었습니다.");
+	            	return false;
+	            }else if(phone.startsWith("02") && phone.length>12){
+	            	alert("전화번호가 잘못입력 되었습니다.");
+	            	return false;
+	            }
+            }else{
+            	if((!result) || phone.length<9 || phone.length>11 ||(phone.length==9 && !phone.startsWith("02"))){
+	            	alert("전화번호가 잘못입력 되었습니다.");
+	            	return false;
+	            }else if(phone.startsWith("02") && phone.length>10){
+	            	alert("전화번호가 잘못입력 되었습니다.");
+	            	return false;
+	            }
+            }
             
             return true;
         }
@@ -1093,7 +1206,7 @@
              var data = {
                  "b_no": [$("#business_number").val()] // 사업자번호 "xxxxxxx" 로 조회 시,
              };
-				alert($("#business_number").val());
+				//alert($("#business_number").val());
              $.ajax({
                  url: "https://api.odcloud.kr/api/nts-businessman/v1/status?serviceKey=pj1%2B669xKchgAcU3BhHK0bxmPPyBX9A%2FSmvsKpvuzhwIroogcKjl4B5qUfW3XYojSy0TgPWr6jrBOREJkxghlA%3D%3D",  // serviceKey 값을 YOUR_SERVICE_KEY에 입력
                  type: "POST",
@@ -1121,6 +1234,9 @@
 
 		//영업시간 복사하는 함수
 		function copyCommonSchedule(checkbox, day) {
+			// 요일 체크박스 자동 체크
+		      document.querySelector(`input[name="week"][value="${day}"]`).checked = checkbox.checked;
+		      toggleTimeSelectors(day);
 		    if (checkbox.checked) {
 		      const commonStartHour = document.querySelector('select[name="commonStartHour"]').value;
 		      const commonStartMinute = document.querySelector('select[name="commonStartMinute"]').value;
@@ -1141,10 +1257,10 @@
 		      document.querySelector(`select[name="lunchEndHour_${day}"]`).value = commonLunchEndHour;
 		      document.querySelector(`select[name="lunchEndMinute_${day}"]`).value = commonLunchEndMinute;
 		      document.querySelector(`input[name="lunch_${day}"]`).checked = commonNoLunch;
+		      //alert(commonNoLunch);
+		      toggleLunchTimeSelectors(day);
 		      
-		      // 요일 체크박스 자동 체크
-		      document.querySelector(`input[name="week"][value="${day}"]`).checked = true;
-		      toggleTimeSelectors(day);
+		      
 		    }
 		}
         
@@ -1216,7 +1332,7 @@
 	  	    const commonStartMinute = parseInt(commonStartMinuteSelect.value);
 
 	  	    commonEndHourSelect.innerHTML = '';
-	  	    
+	  	   
 
 	  	    for (let hour = commonStartHour; hour <= 24; hour++) {
 	  	        const hourOption = document.createElement('option');

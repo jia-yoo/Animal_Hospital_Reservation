@@ -12,7 +12,7 @@
 	crossorigin="anonymous">
 <link href="/css/style.css" rel="stylesheet">
 <link rel="stylesheet" href="/css/userMyPage_SideBar.css">
-<link rel="stylesheet" href="/css/mypage_SideBar.css">
+<link rel="stylesheet" href="/css/mypage.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link
@@ -35,8 +35,8 @@
 				<input type="text" name="username" id="username" class="form-control" readonly>
 			</div>
 			<div class="mb-3">
-				<input type="checkbox" id="passwordCheckBox" onchange="togglePasswordCheckBox()">
- 				<label class="form-label">비밀번호 변경</label> 
+				<input type="checkbox" name="passwordCheckBox" id="passwordCheckBox" onchange="togglePasswordCheckBox()">
+ 				<label class="form-label" for="passwordCheckBox">비밀번호 변경</label> 
 				<input type="password" name="passwordNew" class="form-control" disabled>
 				<input type="hidden" name="passwordOrigin">
 				<div>비밀번호는 5자 이상, 15자 이하, 영어, 숫자, 특수문자를 포함해야 합니다.</div>
@@ -147,7 +147,7 @@
 			"address": frm.address1.value + "//" + frm.address2.value + "//" + frm.detailAddress.value,
 			"phone": frm.phone.value,
 			"nickname": frm.nickname.value,
-			"passwordCheckBox" : frm.passwordCheckBox.value,
+			"passwordCheckBox" : passwordChecked,
 			"passwordOrigin" : frm.passwordOrigin.value,
 			"passwordNew" : frm.passwordNew.value
 			
@@ -159,6 +159,7 @@
 			responseCheck(this);
 			var result = this.responseText;
 			alert(this.responseText);
+			window.location.href="/user/my_info_edit";
 			//document.getElementById("result").innerHTML = result;
 		}
 		xhttp.open("put", "http://localhost:9001/api/v1/user/userInfo");
@@ -219,6 +220,30 @@
              alert("닉네임 중복 체크를 확인해 주세요.");
              document.querySelector("#nickname").focus();
              return false;
+         }
+		 
+		//전화번호 유효성 검사
+         let phone =frm.phone.value.trim();
+         phone = phone.replace(/\s+/g, '');
+         const pCheck = /^[0-9-]+$/;
+        	const result =pCheck.test(phone);
+         //alert("phone:" + phone);
+         if(phone.includes("-")){
+         	if((!result) || phone.length<11 || phone.length>13 ||(phone.length==11 && !phone.startsWith("02"))){
+	            	alert("전화번호가 잘못입력 되었습니다.");
+	            	return false;
+	            }else if(phone.startsWith("02") && phone.length>12){
+	            	alert("전화번호가 잘못입력 되었습니다.");
+	            	return false;
+	            }
+         }else{
+         	if((!result) || phone.length<9 || phone.length>11 ||(phone.length==9 && !phone.startsWith("02"))){
+	            	alert("전화번호가 잘못입력 되었습니다.");
+	            	return false;
+	            }else if(phone.startsWith("02") && phone.length>10){
+	            	alert("전화번호가 잘못입력 되었습니다.");
+	            	return false;
+	            }
          }
 		return true;
 	}

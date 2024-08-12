@@ -52,6 +52,9 @@ ready();
 			responseCheck(this);
 			if(this.status ==200){
 			const list = JSON.parse(this.responseText);
+			if(list.length ===0){
+				favList.innerHTML =`즐겨찾기 등록한 병원이 없습니다.`;
+			}
 			list.forEach(vet =>{
 				var adds = vet.address.split("//");
 				

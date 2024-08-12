@@ -2,10 +2,11 @@ package com.example.restServer.controller.hospital;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
-import java.util.Enumeration;
 import java.util.List;
 import java.util.Optional;
 
@@ -28,14 +29,18 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.restServer.dto.UnavailableTimeDto;
 import com.example.restServer.entity.Doctor;
 import com.example.restServer.entity.Member;
+import com.example.restServer.entity.Pet;
 import com.example.restServer.entity.Point;
 import com.example.restServer.entity.Reservation;
 import com.example.restServer.entity.UnavailableTime;
 import com.example.restServer.repository.DoctorRepository;
 import com.example.restServer.repository.MemberRepository;
+import com.example.restServer.repository.PetRepository;
 import com.example.restServer.repository.PointRepository;
 import com.example.restServer.repository.ReservationRepository;
 import com.example.restServer.repository.UnavailableTimeRepository;
+import com.example.restServer.service.user.ReservationService;
+import com.example.restServer.util.DateTimeUtil;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -58,6 +63,12 @@ public class HospitalReservationController_js {
 	
 	@Autowired
 	UnavailableTimeRepository unavailableTimeRepo;
+	
+	@Autowired
+	PetRepository petRepo;
+	
+	@Autowired
+	ReservationService reservService;
 	
 	@GetMapping("/reservation/status/{status}")
 	public ResponseEntity<Page<Reservation>> getWaitingReservation(@RequestParam(name = "page", defaultValue = "0") int page, HttpServletRequest request, @PathVariable("status")String status){
@@ -128,14 +139,36 @@ public class HospitalReservationController_js {
 		Reservation reservation = result.get();
 		reservation.setStatus(status);
 		Reservation reservation2 = reservationRepo.save(reservation);
-		System.out.println(reservation2);
 		if(status.equals("취소")) {
+			LocalDateTime reservationDatetime =  reservation2.getReservationDatetime();
+		     LocalDate date = reservationDatetime.toLocalDate();
+		     String datestr = date.toString();
+		     System.out.println(datestr);
+		     LocalTime time = reservationDatetime.toLocalTime();
+		     String timestr = time.toString();
+		     System.out.println(timestr);
+		     UnavailableTime unavailableTime = unavailableTimeRepo.findTimeByDoctorIdNDatetime(reservation2.getDoctor().getId(), datestr, timestr);
+		     unavailableTimeRepo.deleteById(unavailableTime.getId());
+			 
+			//코커런트 해시맵에서 락객체 삭제
+		      String slotKey = reservService.getSlotKey(Long.toString(reservation2.getDoctor().getId()), DateTimeUtil.formatDate(reservation2.getReservationDatetime()), DateTimeUtil.formatTime1(reservation2.getReservationDatetime()));
+		      
+		      reservService.slotLocks.forEach((key, lockInfo) -> {
+		         System.out.println(key.equals(slotKey));
+		            if (key.equals(slotKey)) {
+		               reservService.slotLocks.computeIfPresent(key, (k, v) -> null);
+		            }
+		        });
+		}
+		
+	     
+		if(status.equals("취소") && reservation2.getPointsUsed() !=null) {
 			Point point = new Point();
 			point.setUser(reservation.getUser());
 			point.setPointsAccumulated(reservation.getPointsUsed());
 			point.setComment("예약 취소 포인트 반환");
 			point.setAccumulationDate(new Date());
-			pointRepo.save(point);
+			pointRepo.save(point); 
 		}
 		return new ResponseEntity<>(reservation2, HttpStatus.OK);
 	}
@@ -208,7 +241,7 @@ public class HospitalReservationController_js {
 		}
 		Doctor doctor = doctorRepo.findById(unavailableTimeDto.getDoctorId()).get();
 		Member member = memberRepo.findById(unavailableTimeDto.getHospitalId()).get();
-		System.out.println("date" + date);
+		System.out.println("date " + unavailableTimeDto.getTime());
 		unavailableTimeRepo.deleteAllByIdDate(unavailableTimeDto.getDoctorId(), date);
 		List<String> times =  unavailableTimeDto.getTime();
 		for(int i = 0 ; i < times.size(); i++) {
@@ -226,8 +259,81 @@ public class HospitalReservationController_js {
 			unavailableTimeRepo.save(unavailableTime);
 		}
 		
-		return new ResponseEntity<>("아ㅏㅇ", HttpStatus.OK);
+		return new ResponseEntity<>("Ok", HttpStatus.OK);
 	}
 	
+	@GetMapping("/customer/{filter}")
+	public ResponseEntity<Page<Reservation>> getCustomerList(@PathVariable("filter")String filter, @RequestParam(name = "page", defaultValue = "0") int page, HttpServletRequest request){
+		String memberIdHeader = request.getHeader("memberId");
+	    String authHeader = request.getHeader("Authorization");
+
+	    if (memberIdHeader == null || authHeader == null) {
+	        return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+	    }
+	    int size = 10;
+	    Pageable pageable = PageRequest.of(page, size);
+	    Long memberId = Long.parseLong(memberIdHeader);
+	    System.out.println(filter);
+	    if(filter.equals("last-date")) {
+	    	Page<Reservation> list = reservationRepo.findByCustomerListLastDate(pageable, memberId);
+			return new ResponseEntity<>(list, HttpStatus.OK);
+	    }else if(filter.equals("user-name")) {
+	    	Page<Reservation> list = reservationRepo.findByCustomerListFilterByUserName(pageable, memberId);
+			return new ResponseEntity<>(list, HttpStatus.OK);
+	    }else {
+	    	Page<Reservation> list = reservationRepo.findByCustomerListFilterByName(pageable, memberId);
+			return new ResponseEntity<>(list, HttpStatus.OK);
+	    }
+	    
+	}
+	
+	@GetMapping("/customer/{filter}/{keyword}")
+	public ResponseEntity<Page<Reservation>> getCustomerListKeyword(@PathVariable("filter")String filter, @PathVariable("keyword")String keyword, @RequestParam(name = "page", defaultValue = "0") int page, HttpServletRequest request){
+		String memberIdHeader = request.getHeader("memberId");
+	    String authHeader = request.getHeader("Authorization");
+
+	    if (memberIdHeader == null || authHeader == null) {
+	        return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+	    }
+	    int size = 10;
+	    Pageable pageable = PageRequest.of(page, size);
+	    Long memberId = Long.parseLong(memberIdHeader);
+	    System.out.println(filter);
+	    if(filter.equals("last-date")) {
+	    	Page<Reservation> list = reservationRepo.findByCustomerListLastDateKeyword(pageable, memberId, keyword);
+			return new ResponseEntity<>(list, HttpStatus.OK);
+	    }else if(filter.equals("user-name")) {
+	    	Page<Reservation> list = reservationRepo.findByCustomerListFilterByUserNameKeyword(pageable, memberId, keyword);
+			return new ResponseEntity<>(list, HttpStatus.OK);
+	    }else {
+	    	Page<Reservation> list = reservationRepo.findByCustomerListFilterByNameKeyword(pageable, memberId, keyword);
+			return new ResponseEntity<>(list, HttpStatus.OK);
+	    }
+	    
+	}
+	
+	@GetMapping("/pet/{petId}")
+	public ResponseEntity<Pet> getPetDetail(@PathVariable("petId")Long petId){
+		Pet pet = petRepo.findById(petId).get();
+		return new ResponseEntity<>(pet, HttpStatus.OK);
+	}
+	
+	@GetMapping("/reservation/pet/{petId}")
+	public ResponseEntity<Page<Reservation>> getPetReservationList(@RequestParam(name = "page", defaultValue = "0") int page, HttpServletRequest request, @PathVariable("petId")Long petId){
+		System.out.println("동물별 예약 정보 가져오기");
+		
+		String memberIdHeader = request.getHeader("memberId");
+		String authHeader = request.getHeader("Authorization");
+		System.out.println("동물별 예약 정보 가져오기" + memberIdHeader + authHeader);
+		if(memberIdHeader == null || authHeader == null) {
+			return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+		}
+		int size = 6;
+		Pageable pageable = PageRequest.of(page, size);
+		Long hospitalId = Long.parseLong(memberIdHeader);
+		
+		Page<Reservation> list = reservationRepo.findByPetAndHospitalId(pageable, petId, hospitalId);
+		return new ResponseEntity<>(list, HttpStatus.OK);
+	}
 	
 }

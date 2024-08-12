@@ -6,20 +6,22 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.locks.Lock;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
-import com.example.restServer.entity.Coupon;
 import com.example.restServer.entity.Doctor;
 import com.example.restServer.entity.Member;
 import com.example.restServer.entity.Pet;
 import com.example.restServer.entity.Point;
 import com.example.restServer.entity.Reservation;
 import com.example.restServer.entity.UnavailableTime;
-import com.example.restServer.repository.CouponRepository;
 import com.example.restServer.repository.DoctorRepository;
 import com.example.restServer.repository.MemberRepository;
 import com.example.restServer.repository.PetRepository;
@@ -38,26 +40,55 @@ public class ReservationService {
     @Autowired 
     private PetRepository petRepo;
     @Autowired 
-    private CouponRepository couponRepo;
-    @Autowired 
     private DoctorRepository doctorRepo;
     @Autowired 
     private UnavailableTimeRepository unavailableTimeRepo;
     @Autowired 
     private PointRepository pointRepo;
-    private final Lock reservationLock = new ReentrantLock();
+    public static final Map<String, LockInfo> slotLocks = new ConcurrentHashMap<>();
+    private final long LOCK_EXPIRATION_TIME = TimeUnit.MINUTES.toMillis(30);
+
+    
+    //오래된 슬롯 삭제
+	@Scheduled(fixedRate = 300000)
+    private void clearOldSlot() {
+        slotLocks.forEach((key, lockInfo) -> {
+            if (System.currentTimeMillis() - lockInfo.timestamp > LOCK_EXPIRATION_TIME) {
+                System.out.println(slotLocks);
+                slotLocks.computeIfPresent(key, (k, v) -> null);
+                System.out.println(slotLocks);
+            }
+        });
+	}
+	
+	
+    public static class LockInfo {
+        ReentrantLock lock = new ReentrantLock();
+        long timestamp = System.currentTimeMillis();
+    }
+
+    private ReentrantLock getLockForSlot(String doctorId, String date, String timeSlot) {
+        String key = getSlotKey(doctorId, date, timeSlot);
+        LockInfo lockInfo = slotLocks.computeIfAbsent(key, k -> new LockInfo());
+        lockInfo.timestamp = System.currentTimeMillis();
+        return lockInfo.lock;
+    }
+
+    
+    public static String getSlotKey(String doctorId, String date, String timeSlot) {
+        return doctorId + "-" + date + "-" + timeSlot;
+    }
+    
 
     public Map<String, Object> getPetInfo(Long userId, Long hospitalId) {
         Member user = memRepo.findById(userId).get();
         List<Pet> petList = petRepo.findAllByMemberId(userId);
-        List<Coupon> couponList = couponRepo.findCouponByUserAndHospital(userId, hospitalId);
         Integer point = pointRepo.findByUserIdRemainingPoints(userId);
         List<Integer> pointList = new ArrayList<>();
         pointList.add(point);
         Map<String, Object> map = new HashMap<>();
         map.put("user", user);
         map.put("petList", petList);
-        map.put("couponList", couponList);
         map.put("pointList", pointList);
         return map;
     }
@@ -83,8 +114,9 @@ public class ReservationService {
         return map;
     }
 
-    public String makeReservation(Map<String, String> formData, Long userId) throws ParseException {
-        reservationLock.lock();
+    public String makeReservation(Map<String, String> formData, Long userId) throws ParseException, ResponseStatusException {
+    	ReentrantLock slotLock = getLockForSlot(formData.get("doctorId"), formData.get("date"), formData.get("time"));
+        slotLock.lock();
         try { 
             Date now = new Date();
             LocalDateTime dateTime = DateTimeUtil.parseDateTime(formData);
@@ -93,22 +125,24 @@ public class ReservationService {
             
              // 예약 중복 확인
             if (isDuplicateReservation(reservation)) {
-                throw new IllegalArgumentException("중복예약이 발생했습니다.");
+            	 throw new ResponseStatusException(HttpStatus.CONFLICT, "중복예약이 발생했습니다.");
             }
             
             reservRepo.save(reservation);
 
             UnavailableTime unavailTime = createUnavailableTime(formData, reservation, dateTime);
             unavailableTimeRepo.save(unavailTime);
-            return "";
+            return "success";
         } finally {
-            reservationLock.unlock();
+        	slotLock.unlock();
+        	System.out.println(slotLocks);
         }
     }
 
-    public String editReservation(Map<String, String> formData, Long userId) throws ParseException {
-        reservationLock.lock();
-        try {
+    public String editReservation(Map<String, String> formData, Long userId) throws ParseException,ResponseStatusException {
+    	ReentrantLock slotLock = getLockForSlot(formData.get("doctorId"), formData.get("date"), formData.get("time"));
+        slotLock.lock();
+    	try {
             Date now = new Date();
            
             Long reservId = Long.parseLong(formData.get("reservId"));
@@ -122,15 +156,15 @@ public class ReservationService {
             
             // 예약 중복 확인
             if (isDuplicateReservation(reservation)) {
-                throw new IllegalArgumentException("중복예약이 발생했습니다.");
+            	 throw new ResponseStatusException(HttpStatus.CONFLICT, "중복예약이 발생했습니다.");
             }
             reservRepo.save(reservation);
 
             UnavailableTime unavailTime = createUnavailableTime(formData, reservation, dateTime);
             unavailableTimeRepo.save(unavailTime);
-            return "";
+            return "success";
         } finally {
-            reservationLock.unlock();
+        	slotLock.unlock();
         }
     }
     
@@ -158,6 +192,7 @@ public class ReservationService {
 
     private Reservation createReservation(Map<String, String> formData, Long userId, LocalDateTime dateTime) {
         Date now = new Date();
+
         Reservation reservation = new Reservation();
         reservation.setUser(memRepo.findById(userId).get());
         reservation.setHospital(memRepo.findById(Long.parseLong(formData.get("hospitalId"))).get());
@@ -169,7 +204,6 @@ public class ReservationService {
         reservation.setReservationDatetime(dateTime);
 
         setReservationPoints(formData, reservation, userId, now);
-        setReservationCoupon(formData, reservation, now);
 
         return reservation;
     }
@@ -187,15 +221,6 @@ public class ReservationService {
         }
     }
 
-    private void setReservationCoupon(Map<String, String> formData, Reservation reservation, Date now) {
-        if (!formData.get("coupon").equals("쿠폰사용 안함")) {
-            Coupon coupon = couponRepo.findById(Long.parseLong(formData.get("coupon"))).get();
-            coupon.setIsUsed(true);
-            coupon.setUseDate(now);
-            reservation.setCoupon(coupon);
-            couponRepo.save(coupon);
-        }
-    }
 
     private UnavailableTime createUnavailableTime(Map<String, String> formData, Reservation reservation, LocalDateTime dateTime) throws ParseException {
         UnavailableTime unavailTime = new UnavailableTime();
@@ -221,7 +246,6 @@ public class ReservationService {
         }
 
         updateReservationPoints(formData, reservation, now);
-        updateReservationCoupon(formData, reservation, now);
     }
 
     private void updateReservationPoints(Map<String, String> formData, Reservation reservation, Date now) {
@@ -255,27 +279,5 @@ public class ReservationService {
         }
     }
 
-    private void updateReservationCoupon(Map<String, String> formData, Reservation reservation, Date now) {
-        if (formData.get("coupon").equals("쿠폰사용 안함")) {
-            if (reservation.getCoupon() != null) {
-                Coupon cp = reservation.getCoupon();
-                cp.setIsUsed(false);
-                cp.setUseDate(null);
-                couponRepo.save(cp);
-            }
-            reservation.setCoupon(null);
-        } else {
-            if (reservation.getCoupon() != null) {
-                Coupon cp = reservation.getCoupon();
-                cp.setIsUsed(false);
-                cp.setUseDate(null);
-                couponRepo.save(cp);
-            }
-            Coupon coupon = couponRepo.findById(Long.parseLong(formData.get("coupon"))).get();
-            coupon.setIsUsed(true);
-            coupon.setUseDate(now);
-            reservation.setCoupon(coupon);
-            couponRepo.save(coupon);
-        }
-    }
+  
 }

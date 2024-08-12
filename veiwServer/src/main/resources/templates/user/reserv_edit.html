@@ -60,18 +60,12 @@
 			</select>
 		</div>
 		<div class="mt-3 item"><div>메모</div><textarea type="text" name="memo"></textarea></div>
-		<div class="mt-3 item">
-			<div>쿠폰사용</div>
-			<select id="coupon" class="form-select" aria-label="Default select example">
-			  <option selected>쿠폰사용 안함</option>
-			</select>
-		</div>
 		<div class="mt-3 item point_container">
 		<div class="point_container" ><span>포인트 사용</span><span>&nbsp &nbsp ※ 1000 포인트 단위로 사용 가능</span><span> &nbsp&nbsp 보유포인트 <span id="point"></span>P</span></div>
 		<input class="point_container" type="text" name="points_used" placeholder="0">
 		</div>
 		<input class="btn btn-main" onclick=" return submitForm(event)" type="button" value="예약수정">
-		<button class="btn btn-user-sub" onclick="">문의채팅</button>
+		<input class="btn btn-main" onclick="goingBack()" type="button" value="뒤로">
 	</div>
 	<div th:replace="~{user/footer :: footer}"></div>
 	<script
@@ -98,6 +92,10 @@ xhttp.setRequestHeader("MemberId", localStorage.getItem("MemberId"));
 xhttp.setRequestHeader("Authorization", localStorage.getItem("token"));
 xhttp.setRequestHeader("role", localStorage.getItem("role"));
 xhttp.send();
+
+function goingBack(){
+	location.href="/user/reserv_list?btn=wait";
+}
 
 function loadReservationInfo(data){
 	let userInfo = data[0];
@@ -146,7 +144,7 @@ function loadReservationInfo(data){
 	 selectedTime = hour.toString().padStart(2, '0')+":"+minute.toString().padStart(2, '0');
 	 selectedSlot = oriSelectedTimeslot;
 	 oriSelectedTimeslot = document.querySelector("span[value='"+ selectedTime +"']")
-	 oriSelectedTimeslot.style.backgroundColor= "#84e3d0";
+	 oriSelectedTimeslot.classList.add("original_reservation");
 }
 
 
@@ -186,9 +184,18 @@ function submitForm(e){
 	 const xhttp = new XMLHttpRequest();
 	  xhttp.onload = function() {
 		responseCheck(this);
-	    alert("예약이 성공적으로 수정되었습니다");
-	    //마이페이지로 이동
-	    location.href="/user/reserv_list"
+		
+		if (this.status == 200) { 
+			alert("예약이 성공적으로 수정되었습니다");
+			//마이페이지로 이동
+// 		    location.href="/user/reserv_list"
+	     }else if(this.status == 409){
+ 			 //배경색 다시 바꿔주기
+ 			 document.querySelector("span[value='" + selectedTime + "']").style.backgroundColor = ""; 
+ 			 document.querySelector("span[value='" + selectedTime + "']").style.color = "gray"; 
+ 			 document.querySelector("span[value='" + selectedTime + "']").style.pointerEvents = "none"; 
+ 			 document.querySelector("span[value='" + selectedTime + "']").classList.add("disabled");
+ 		 }
 	    }
 	  xhttp.open("PUT", "http://localhost:9001/api/v1/user/reservation", true);
 	  xhttp.setRequestHeader("MemberId", localStorage.getItem("MemberId"));

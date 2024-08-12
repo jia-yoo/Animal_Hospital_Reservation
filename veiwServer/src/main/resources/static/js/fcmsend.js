@@ -5,7 +5,8 @@ function sendTokenToMessage(title, body) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'MemberId': localStorage.getItem('MemberId')
+            'MemberId': localStorage.getItem('MemberId'),
+            'Authorization': localStorage.getItem('token')
         },
         body: JSON.stringify({ token: localStorage.getItem('fcm'), title: title, body:body })
     }).then(response => {
@@ -16,12 +17,13 @@ function sendTokenToMessage(title, body) {
 }
 
 // FCM 대상자 지정 메세지 전송
-function sendTokenToMessageReceiver(title, body){
+function sendTokenToMessageReceiver(receiverId, title, body){
 	fetch(`http://localhost:9001/api/v1/fcm/message/${receiverId}`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'MemberId': localStorage.getItem('MemberId')
+            'MemberId': localStorage.getItem('MemberId'),
+            'Authorization': localStorage.getItem('token')
         },
         body: JSON.stringify({ title: title, body:body })
     }).then(response => {

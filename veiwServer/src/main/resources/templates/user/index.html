@@ -45,18 +45,19 @@
 
 <h1 class="mt-3 mt-md-5 mb-3 mb-md-3">내 주변 동물병원</h1>
 
-<div class="mapContainer">
+<div class="mapContainer row">
     <div class="map-header">
         <div class="point-partner">
             <img src="/images/pin_p.svg" class="partner-icon"/> 
             <span class="partner-text">포인트 제휴 병원</span>
         </div>
-        <img id="curBtn" src="/images/current.png"/>
+    </div>
+    <div id="map" class="col-md-9" style="height:700px;">
+    	<img id="curBtn" src="/images/current.png"/>
         <div id="searchAreaBtn" style="display:none;">이 지역 검색하기</div>
     </div>
-    <div id="map" style="width:100%; height:700px; margin-bottom:50px;"></div>
     
-    <div class="vet_list">
+    <div class="vet_list col-md-3">
 	    <div class="dropdown" style="font-family:'Jua';">
 		  <button class="btn btn-secondary dropdown-toggle btn-main" type="button" data-bs-toggle="dropdown" aria-expanded="false">
 		    정렬
@@ -125,16 +126,22 @@
 </div>
 <div th:replace="~{user/footer :: footer}"></div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client/dist/sockjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/stompjs/lib/stomp.min.js"></script>
 <script type="text/javascript" src="/js/index.js"></script>
 <script type="text/javascript" src="/js/modal.js"></script>
+
 <script>
 
 const mainGif = document.querySelector("#mainGif");
 
 function chat(e){
-	let hosId=e.target.closest("#exampleModal").querySelector("#exampleModalLabel").getAttribute("data-id");
-	console.log(e.target.closest("#exampleModal").querySelector("#exampleModalLabel").getAttribute("data-id"))
-	window.location.href = "/user/newChat/" + hosId;
+	if(localStorage.getItem("MemberId") == null || localStorage.getItem("role") != "ROLE_USER"){
+		alert("로그인한 회원만 사용할 수 있는 기능입니다. 로그인 후 이용해주세요")
+	}else{
+		let hosId=e.target.closest("#exampleModal").querySelector("#exampleModalLabel").getAttribute("data-id");
+		window.location.href = "/user/newChat/" + hosId;
+	}
 }
 
 

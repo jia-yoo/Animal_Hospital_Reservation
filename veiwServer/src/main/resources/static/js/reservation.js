@@ -27,8 +27,14 @@ function loadBasicInfo(data){
 	let vetInfo = data[2];
 	let vetNamesNIds = Object.keys(vetAvailInfo);
 	let basicHours = JSON.parse(vetInfo[Object.keys(vetInfo)[0]].businessHours);
+	console.log(userInfo.petList)
 	
-
+	//등록된 반려동물이 없을 시에 알림창 띄워주기
+	if(userInfo.petList.length == 0){
+		alert("등록된 반려동물이 없습니다. 반려동물을 먼저 등록해주세요");
+		location.href="/user/myPetForm";
+	}
+	
 	  //병원 이름 넣기
 	  document.querySelector("#vetName").setAttribute("value", Object.keys(vetInfo)[0]);
 	  //로그인한 사용자 이름 넣어주기
@@ -45,14 +51,6 @@ function loadBasicInfo(data){
 	  }
 	  
 	  
-	  //쿠폰 정보 넣기
-	  for(let i = 0; i < userInfo.couponList.length; i++){
-		  let coupon = userInfo.couponList[i];
-		  let listItem = document.createElement("option");
-		  listItem.setAttribute("value", coupon.id);
-		  listItem.innerHTML = coupon.name + ', 발행날짜' + convertTimestamp(coupon.issueDate) + ', 만료날짜' + convertTimestamp(coupon.expiryDate);
-		  document.querySelector("#coupon").appendChild(listItem);
-	  }
 	  //반려동물정보넣기
 	  for(let i = 0; i < userInfo.petList.length; i++){
 		  let pet = userInfo.petList[i];
@@ -171,6 +169,7 @@ function showDates(startTime, endTime, lunchStart, lunchEnd){
         	selectedTime = timeString;
         	if (selectedSlot) {
                 selectedSlot.style.backgroundColor = ""; 
+                selectedSlot.style.color = "black"; 
             }
             e.target.style.backgroundColor = "#4C5CB3";
             e.target.style.color = "white";
@@ -225,7 +224,6 @@ function loadTimeslot(basicHours, vetAvailInfo) {
                 }
             }
         }
-console.log("타임슬롯뿌ㅡ리기")
         // 선생님의 availability 보여주기
         Object.keys(vetAvailInfo).forEach(key => {
 				
